@@ -225,19 +225,20 @@ def build_cls_dataset(dataset_list, transforms, dataset_catalog, is_train=True, 
         datasets.append(dataset)
 
     # for testing, return a list of datasets
-    if not is_train:
-        return datasets
+    #if not is_train:
+    #    return datasets
 
     # for training, concatenate all datasets into a single one
-    dataset = datasets[0]
-    if len(datasets) > 1:
-        dataset = D.ConcatDataset(datasets)
+    #dataset = datasets[0]
+    #if len(datasets) > 1:
+    #    dataset = D.ConcatDataset(datasets)
 
-    return [dataset]
+    #return [dataset]
+    return datasets
 
 
 # clean, foggy, snowy
-NUM_DOMAINS = 3
+NUM_TARGET_DOMAINS = 2
 
 def make_cls_data_loader(cfg, is_train=True, domains=['clean'], is_distributed=False, start_iter=0):
     if 'clean' in domains:
@@ -255,11 +256,11 @@ def make_cls_data_loader(cfg, is_train=True, domains=['clean'], is_distributed=F
 
         if cfg.MODEL.DOMAIN_ADAPTATION_ON:
             assert (
-            images_per_batch % (NUM_DOMAINS*num_gpus) == 0
+            images_per_batch % ((NUM_TARGET_DOMAINS+1)*num_gpus) == 0
             ), "SOLVER.IMS_PER_BATCH ({}) must be divisible by {} times the number "
-            "of GPUs ({}) used.".format(images_per_batch,NUM_DOMAINS, num_gpus)
+            "of GPUs ({}) used.".format(images_per_batch,NUM_TARGET_DOMAINS+1, num_gpus)
 
-            images_per_gpu = images_per_batch // (NUM_DOMAINS*num_gpus)
+            images_per_gpu = images_per_batch // ((NUM_TARGET_DOMAINS+1)*num_gpus)
         
         shuffle = True
         num_iters = cfg.SOLVER.MAX_ITER
@@ -335,8 +336,8 @@ def make_cls_data_loader(cfg, is_train=True, domains=['clean'], is_distributed=F
             collate_fn=collator,
         )
         data_loaders.append(data_loader)
-    if is_train:
-        # during training, a single (possibly concatenated) data_loader is returned
-        assert len(data_loaders) == 1
-        return data_loaders[0]
+    #if is_train:
+    #    # during training, a single (possibly concatenated) data_loader is returned
+    #    assert len(data_loaders) == 1
+    #    return data_loaders[0]
     return data_loaders
