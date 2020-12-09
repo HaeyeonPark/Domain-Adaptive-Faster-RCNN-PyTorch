@@ -193,7 +193,6 @@ def make_data_loader(cfg, is_train=True, is_source=True, is_distributed=False, s
 
 
 # eun0
-
 def build_cls_dataset(dataset_list, transforms, dataset_catalog, is_train=True, domains=['clean']):
     """
     Arguments:
@@ -213,7 +212,6 @@ def build_cls_dataset(dataset_list, transforms, dataset_catalog, is_train=True, 
         data = dataset_catalog.get(dataset_name)
         factory = getattr(D, data["factory"])
         args = data["args"]
-        args["is_train"] = is_train
         # for COCODataset, we want to remove images without annotations
         # during training
         if data["factory"] == "COCODomainDataset":
