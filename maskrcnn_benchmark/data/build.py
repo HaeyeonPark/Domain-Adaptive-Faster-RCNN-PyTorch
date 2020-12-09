@@ -193,10 +193,57 @@ def make_data_loader(cfg, is_train=True, is_source=True, is_distributed=False, s
 
 
 # eun0
+
+def build_cls_dataset(dataset_list, transforms, dataset_catalog, is_train=True, domains=['clean']):
+    """
+    Arguments:
+        dataset_list (list[str]): Contains the names of the datasets, i.e.,
+            coco_2014_trian, coco_2014_val, etc
+        transforms (callable): transforms to apply to each (image, target) sample
+        dataset_catalog (DatasetCatalog): contains the information on how to
+            construct a dataset.
+        is_train (bool): whether to setup the dataset for training or testing
+    """
+    if not isinstance(dataset_list, (list, tuple)):
+        raise RuntimeError(
+            "dataset_list should be a list of strings, got {}".format(dataset_list)
+        )
+    datasets = []
+    for i,dataset_name in enumerate(dataset_list):
+        data = dataset_catalog.get(dataset_name)
+        factory = getattr(D, data["factory"])
+        args = data["args"]
+        args["is_train"] = is_train
+        # for COCODataset, we want to remove images without annotations
+        # during training
+        if data["factory"] == "COCODomainDataset":
+            args["remove_images_without_annotations"] = is_train
+        if data["factory"] == "PascalVOCDataset":
+            args["use_difficult"] = not is_train
+        args["transforms"] = transforms
+        args["domain"] = domains[i]
+        # make dataset from factory
+        dataset = factory(**args)
+        datasets.append(dataset)
+
+    # for testing, return a list of datasets
+    if not is_train:
+        return datasets
+
+    # for training, concatenate all datasets into a single one
+    dataset = datasets[0]
+    if len(datasets) > 1:
+        dataset = D.ConcatDataset(datasets)
+
+    return [dataset]
+
+
 # clean, foggy, snow
 NUM_DOMAINS = 3
 
-def make_cls_data_loader(cfg, is_train=True, domain='clean', is_distributed=False, start_iter=0):
+def make_cls_data_loader(cfg, is_train=True, domains=['clean'], is_distributed=False, start_iter=0):
+    if 'clean' in domains:
+        assert (len(domains)==1)
     num_gpus = get_world_size()
     if is_train:
         images_per_batch = cfg.SOLVER.IMS_PER_BATCH
@@ -254,15 +301,18 @@ def make_cls_data_loader(cfg, is_train=True, domain='clean', is_distributed=Fals
 
     if is_train:
         if cfg.MODEL.DOMAIN_ADAPTATION_ON:
-            if domain == 'clean':
-                dataset_list = cfg.DATASETS.CLEAN_TRAIN
-            elif domain == 'foggy':
-                dataset_list = cfg.DATASETS.FOGGY_TRAIN
-            elif domain == 'snow':
-                dataset_list = cfg.DATASETS.SNOW_TRAIN
-            else:
-                dataset_list = None
-                raise NotImplementedError("Unknown domain")
+            dataset_list = []
+            for i,domain in enumerate(domains):
+                if domain == 'clean':
+                    dataset_list.append(cfg.DATASETS.CLEAN_TRAIN)
+                    break
+                elif domain == 'foggy':
+                    dataset_list.append(cfg.DATASETS.FOGGY_TRAIN)
+                elif domain == 'snow':
+                    dataset_list.append(cfg.DATASETS.SNOW_TRAIN)
+                else:
+                    dataset_list = None
+                    raise NotImplementedError("Unknown domain")
         else:
             dataset_list = cfg.DATASETS.TRAIN
     else:
@@ -270,7 +320,7 @@ def make_cls_data_loader(cfg, is_train=True, domain='clean', is_distributed=Fals
 
 
     transforms = build_transforms(cfg, is_train)
-    datasets = build_dataset(dataset_list, transforms, DatasetCatalog, is_train, domain)
+    datasets = build_dataset(dataset_list, transforms, DatasetCatalog, is_train, domains)
 
     data_loaders = []
     for dataset in datasets:
