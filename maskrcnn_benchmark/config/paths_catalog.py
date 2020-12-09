@@ -112,6 +112,14 @@ class DatasetCatalog(object):
             "img_dir": "foggy_cityscapes/images",
             "ann_file": "foggy_cityscapes/annotations/foggy_instancesonly_filtered_gtFine_val.json"
         },
+        "snowy_cityscapes_fine_instanceonly_seg_train_cocostyle": {
+            "img_dir": "snowy_cityscapes/images",
+            "ann_file": "snowy_cityscapes/annotations/snowy_instancesonly_filtered_gtFine_train.json"
+        },
+        "snowy_cityscapes_fine_instanceonly_seg_val_cocostyle": {
+            "img_dir": "snowy_cityscapes/images",
+            "ann_file": "snowy_cityscapes/annotations/snowy_instancesonly_filtered_gtFine_val.json"
+        },
         'sim10k_cocostyle': {
                 "img_dir": 'sim10k/JPEGImages',
                 "ann_file": 'sim10k/car_instances.json'
@@ -244,3 +252,64 @@ class ModelCatalog(object):
         unique_name = ".".join([model_name, signature])
         url = "/".join([prefix, model_id, "12_2017_baselines", unique_name, suffix])
         return url
+
+
+class DomainDatasetCatalog(object):
+    DATA_DIR = "datasets"
+    DATASETS = {
+    
+        "cityscapes_fine_instanceonly_seg_train_cocostyle": {
+            "img_dir": "cityscapes/images",
+            "ann_file": "cityscapes/annotations/instancesonly_filtered_gtFine_train.json"
+        },
+        "cityscapes_fine_instanceonly_seg_val_cocostyle": {
+            "img_dir": "cityscapes/images",
+            "ann_file": "cityscapes/annotations/instancesonly_filtered_gtFine_val.json"
+        },
+        "cityscapes_fine_instanceonly_seg_test_cocostyle": {
+            "img_dir": "cityscapes/images",
+            "ann_file": "cityscapes/annotations/instancesonly_filtered_gtFine_test.json"
+        },
+        "foggy_cityscapes_fine_instanceonly_seg_train_cocostyle": {
+            "img_dir": "foggy_cityscapes/images",
+            "ann_file": "foggy_cityscapes/annotations/foggy_instancesonly_filtered_gtFine_train.json"
+        },
+        "foggy_cityscapes_fine_instanceonly_seg_val_cocostyle": {
+            "img_dir": "foggy_cityscapes/images",
+            "ann_file": "foggy_cityscapes/annotations/foggy_instancesonly_filtered_gtFine_val.json"
+        },
+        "snowy_cityscapes_fine_instanceonly_seg_train_cocostyle": {
+            "img_dir": "snowy_cityscapes/images",
+            "ann_file": "snowy_cityscapes/annotations/snowy_instancesonly_filtered_gtFine_train.json"
+        },
+        "snowy_cityscapes_fine_instanceonly_seg_val_cocostyle": {
+            "img_dir": "snowy_cityscapes/images",
+            "ann_file": "snowy_cityscapes/annotations/snowy_instancesonly_filtered_gtFine_val.json"
+        },
+        
+        'cityscapes_car_train_cocostyle': {
+                "img_dir": 'cityscapes/images',
+                "ann_file": 'cityscapes/annotations/caronly_filtered_gtFine_train.json',
+        },
+        'cityscapes_car_val_cocostyle': {
+                "img_dir": 'cityscapes/images',
+                "ann_file": 'cityscapes/annotations/caronly_filtered_gtFine_val.json',
+        },
+        
+    }
+
+    @staticmethod
+    def get(name):
+        if "coco" in name:
+            data_dir = DatasetCatalog.DATA_DIR
+            attrs = DatasetCatalog.DATASETS[name]
+            args = dict(
+                root=os.path.join(data_dir, attrs["img_dir"]),
+                ann_file=os.path.join(data_dir, attrs["ann_file"]),
+            )
+            return dict(
+                factory="COCODomainDataset",
+                args=args,
+            )
+        raise RuntimeError("Dataset not available: {}".format(name))
+

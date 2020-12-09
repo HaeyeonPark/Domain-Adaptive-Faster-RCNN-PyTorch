@@ -295,7 +295,7 @@ def make_cls_data_loader(cfg, is_train=True, domains=['clean'], is_distributed=F
     paths_catalog = import_file(
         "maskrcnn_benchmark.config.paths_catalog", cfg.PATHS_CATALOG, True
     )
-    DatasetCatalog = paths_catalog.DatasetCatalog
+    DatasetCatalog = paths_catalog.DomainDatasetCatalog
 
     if is_train:
         if cfg.MODEL.DOMAIN_ADAPTATION_ON:
