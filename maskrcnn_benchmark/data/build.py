@@ -236,7 +236,7 @@ def build_cls_dataset(dataset_list, transforms, dataset_catalog, is_train=True, 
     return [dataset]
 
 
-# clean, foggy, snow
+# clean, foggy, snowy
 NUM_DOMAINS = 3
 
 def make_cls_data_loader(cfg, is_train=True, domains=['clean'], is_distributed=False, start_iter=0):
@@ -302,12 +302,12 @@ def make_cls_data_loader(cfg, is_train=True, domains=['clean'], is_distributed=F
             dataset_list = []
             for i,domain in enumerate(domains):
                 if domain == 'clean':
-                    dataset_list.append(cfg.DATASETS.CLEAN_TRAIN)
+                    dataset_list.append(cfg.DATASETS.SOURCE_TRAIN)
                     break
                 elif domain == 'foggy':
                     dataset_list.append(cfg.DATASETS.FOGGY_TRAIN)
-                elif domain == 'snow':
-                    dataset_list.append(cfg.DATASETS.SNOW_TRAIN)
+                elif domain == 'snowy':
+                    dataset_list.append(cfg.DATASETS.SNOWY_TRAIN)
                 else:
                     dataset_list = None
                     raise NotImplementedError("Unknown domain")
