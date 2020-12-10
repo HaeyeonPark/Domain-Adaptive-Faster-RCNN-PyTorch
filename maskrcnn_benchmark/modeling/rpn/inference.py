@@ -9,7 +9,7 @@ from maskrcnn_benchmark.structures.boxlist_ops import remove_small_boxes
 
 from ..utils import cat
 from .utils import permute_and_flatten
-
+#eun0
 class RPNPostProcessor(torch.nn.Module):
     """
     Performs post-processing on the outputs of the RPN boxes, before feeding the
@@ -57,7 +57,7 @@ class RPNPostProcessor(torch.nn.Module):
         # Get the device we're operating on
         device = proposals[0].bbox.device
 
-        gt_boxes = [target.copy_with_fields(['is_source']) for target in targets]
+        gt_boxes = [target.copy_with_fields(['domains']) for target in targets]
 
         # later cat of bbox requires all fields to be present for all bbox
         # so we need to add a dummy for objectness that's missing
@@ -66,7 +66,7 @@ class RPNPostProcessor(torch.nn.Module):
 
         new_proposals = []
         for proposal, gt_box in zip(proposals, gt_boxes):
-            if gt_box.get_field('is_source').any():
+            if (gt_box.get_field('domains')==1).any():
                 new_proposals.append(cat_boxlist((proposal, gt_box.copy_with_fields(['objectness']))))
             else:
                 new_proposals.append(proposal)

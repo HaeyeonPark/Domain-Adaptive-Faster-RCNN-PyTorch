@@ -35,8 +35,8 @@ class DALossComputation(object):
     def prepare_masks(self, targets):
         masks = []
         for targets_per_image in targets:
-            is_source = targets_per_image.get_field('is_source')
-            mask_per_image = is_source.new_ones(1, dtype=torch.uint8) if is_source.any() else is_source.new_zeros(1, dtype=torch.uint8)
+            domains = targets_per_image.get_field('domains')
+            mask_per_image = domains.new_ones(1, dtype=torch.uint8) if (domains==1).any() else domains.new_zeros(1, dtype=torch.uint8)
             masks.append(mask_per_image)
         return masks
 
@@ -56,8 +56,8 @@ class DALossComputation(object):
             da_consist_loss (Tensor)
         """
 
-        masks = self.prepare_masks(targets)
-        masks = torch.cat(masks, dim=0)
+        #masks = self.prepare_masks(targets)
+        #masks = torch.cat(masks, dim=0)
 
         da_img_flattened = []
         da_img_labels_flattened = []
@@ -68,11 +68,13 @@ class DALossComputation(object):
         for da_img_per_level in da_img:
             N, A, H, W = da_img_per_level.shape
             da_img_per_level = da_img_per_level.permute(0, 2, 3, 1)
-            da_img_label_per_level = torch.zeros_like(da_img_per_level, dtype=torch.float32)
-            da_img_label_per_level[masks, :] = 1
+            da_img_label_per_level = torch.zeros_like(da_img_per_level, dtype=torch.long)
+            for i,targets_per_image in enumerate(targets):
+                domains = targets_per_image.get_field('domains')
+                da_img_label_per_level[i, :] = domains[0]
 
-            da_img_per_level = da_img_per_level.reshape(N, -1)
-            da_img_label_per_level = da_img_label_per_level.reshape(N, -1)
+            da_img_per_level = da_img_per_level.reshape(-1, A)
+            da_img_label_per_level = da_img_label_per_level.reshape(-1, A)[:,0]
             
             da_img_flattened.append(da_img_per_level)
             da_img_labels_flattened.append(da_img_label_per_level)
@@ -80,11 +82,11 @@ class DALossComputation(object):
         da_img_flattened = torch.cat(da_img_flattened, dim=0)
         da_img_labels_flattened = torch.cat(da_img_labels_flattened, dim=0)
         
-        da_img_loss = F.binary_cross_entropy_with_logits(
+        da_img_loss = F.cross_entropy(
             da_img_flattened, da_img_labels_flattened
         )
-        da_ins_loss = F.binary_cross_entropy_with_logits(
-            torch.squeeze(da_ins), da_ins_labels.type(torch.cuda.FloatTensor)
+        da_ins_loss = F.cross_entropy(
+            torch.squeeze(da_ins), da_ins_labels.type(torch.cuda.LongTensor)
         )
 
         da_consist_loss = consistency_loss(da_img_consist, da_ins_consist, da_ins_labels, size_average=True)

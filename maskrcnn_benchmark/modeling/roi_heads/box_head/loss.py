@@ -51,15 +51,22 @@ class FastRCNNLossComputation(object):
         matched_targets.add_field("matched_idxs", matched_idxs)
         return matched_targets
 
+    #eun0
     def prepare_targets(self, proposals, targets, sample_for_da=False):
         labels = []
         regression_targets = []
         domain_labels = []
         for proposals_per_image, targets_per_image in zip(proposals, targets):
-            is_source = targets_per_image.get_field('is_source')
+            #is_source = targets_per_image.get_field('is_source')
+            #matched_targets = self.match_targets_to_proposals(
+            #    proposals_per_image, targets_per_image, is_source.any()
+            #)
+
+            domains = targets_per_image.get_field('domains')
             matched_targets = self.match_targets_to_proposals(
-                proposals_per_image, targets_per_image, is_source.any()
+                proposals_per_image,targets_per_image,(domains==1).any()
             )
+
             matched_idxs = matched_targets.get_field("matched_idxs")
 
             labels_per_image = matched_targets.get_field("labels")
@@ -78,10 +85,13 @@ class FastRCNNLossComputation(object):
                 matched_targets.bbox, proposals_per_image.bbox
             )
 
-            domain_label = torch.ones_like(labels_per_image, dtype=torch.uint8) if is_source.any() else torch.zeros_like(labels_per_image, dtype=torch.uint8)
+            #domain_label = torch.ones_like(labels_per_image, dtype=torch.uint8) if (dl==1).any() else torch.zeros_like(labels_per_image, dtype=torch.uint8)
+            
+            domain_label = torch.zeros_like(labels_per_image,dtype=torch.uint8)
+            domain_label = domain_label + domains[0]
             domain_labels.append(domain_label)
 
-            if not is_source.any():
+            if not (domains==1).any():
                 labels_per_image[:] = 0
             if sample_for_da:
                 labels_per_image[:] = 0
@@ -188,12 +198,13 @@ class FastRCNNLossComputation(object):
             [proposal.get_field("regression_targets") for proposal in proposals], dim=0
         )
 
-        domain_masks = cat([proposal.get_field("domain_labels") for proposal in proposals], dim=0)
+        domain_labels = cat([proposal.get_field("domain_labels") for proposal in proposals], dim=0)
+        source_mask = domain_labels==1
 
-        class_logits = class_logits[domain_masks, :]
-        box_regression = box_regression[domain_masks, :]
-        labels = labels[domain_masks]
-        regression_targets = regression_targets[domain_masks, :]
+        class_logits = class_logits[source_mask, :]
+        box_regression = box_regression[source_mask, :]
+        labels = labels[source_mask]
+        regression_targets = regression_targets[source_mask, :]
 
         classification_loss = F.cross_entropy(class_logits, labels)
 
@@ -216,7 +227,7 @@ class FastRCNNLossComputation(object):
         )
         box_loss = box_loss / labels.numel()
 
-        return classification_loss, box_loss, domain_masks
+        return classification_loss, box_loss, domain_labels
 
 
 def make_roi_box_loss_evaluator(cfg):

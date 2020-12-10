@@ -155,13 +155,13 @@ class COCODomainDataset(torchvision.datasets.coco.CocoDetection):
         masks = SegmentationMask(masks, img.size)
         target.add_field("masks", masks)
 
-        domain_labels = torch.zeros_like(classes,dtype=torch.uint8)
+        domains = torch.zeros_like(classes,dtype=torch.uint8)
         if self.domain == 'clean':
-            domain_labels = domain_labels + 1
+            domains = domains + 1
         elif self.domain == 'snowy':
-            domain_labels = domain_labels + 2
+            domains = domains + 2
 
-        target.add_field("domain_labels", domain_labels)
+        target.add_field("domains", domains)
 
         if anno and "keypoints" in anno[0]:
             keypoints = [obj["keypoints"] for obj in anno]

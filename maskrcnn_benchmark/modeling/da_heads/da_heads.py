@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 from __future__ import print_function
+from maskrcnn_benchmark.data.build import NUM_TARGET_DOMAINS
 import torch
 import torch.nn.functional as F
 from torch import nn
@@ -7,6 +8,8 @@ from maskrcnn_benchmark.layers import GradientScalarLayer
 
 from .loss import make_da_heads_loss_evaluator
 
+#eun0
+NUM_TARGET_DOMAINS = 2
 class DAImgHead(nn.Module):
     """
     Adds a simple Image-level Domain Classifier head
@@ -21,7 +24,7 @@ class DAImgHead(nn.Module):
         super(DAImgHead, self).__init__()
         
         self.conv1_da = nn.Conv2d(in_channels, 512, kernel_size=1, stride=1)
-        self.conv2_da = nn.Conv2d(512, 1, kernel_size=1, stride=1)
+        self.conv2_da = nn.Conv2d(512, NUM_TARGET_DOMAINS + 1, kernel_size=1, stride=1)
 
         for l in [self.conv1_da, self.conv2_da]:
             torch.nn.init.normal_(l.weight, std=0.001)
@@ -33,6 +36,7 @@ class DAImgHead(nn.Module):
             t = F.relu(self.conv1_da(feature))
             img_features.append(self.conv2_da(t))
         return img_features
+
 
 
 class DAInsHead(nn.Module):
@@ -48,7 +52,7 @@ class DAInsHead(nn.Module):
         super(DAInsHead, self).__init__()
         self.fc1_da = nn.Linear(in_channels, 1024)
         self.fc2_da = nn.Linear(1024, 1024)
-        self.fc3_da = nn.Linear(1024, 1)
+        self.fc3_da = nn.Linear(1024, NUM_TARGET_DOMAINS+1)
         for l in [self.fc1_da, self.fc2_da]:
             nn.init.normal_(l.weight, std=0.01)
             nn.init.constant_(l.bias, 0)
@@ -126,8 +130,8 @@ class DomainAdaptationModule(torch.nn.Module):
         da_ins_features = self.inshead(ins_grl_fea)
         da_img_consist_features = self.imghead(img_grl_consist_fea)
         da_ins_consist_features = self.inshead(ins_grl_consist_fea)
-        da_img_consist_features = [fea.sigmoid() for fea in da_img_consist_features]
-        da_ins_consist_features = da_ins_consist_features.sigmoid()
+        #da_img_consist_features = [fea.sigmoid() for fea in da_img_consist_features]
+        #da_ins_consist_features = da_ins_consist_features.sigmoid()
         if self.training:
             da_img_loss, da_ins_loss, da_consistency_loss = self.loss_evaluator(
                 da_img_features, da_ins_features, da_img_consist_features, da_ins_consist_features, da_ins_labels, targets
