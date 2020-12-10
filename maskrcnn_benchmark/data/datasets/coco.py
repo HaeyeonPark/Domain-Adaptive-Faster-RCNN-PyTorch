@@ -155,7 +155,7 @@ class COCODomainDataset(torchvision.datasets.coco.CocoDetection):
         masks = SegmentationMask(masks, img.size)
         target.add_field("masks", masks)
 
-        domain_labels = torch.zeros_like(classes,dtype=torch.unit8)
+        domain_labels = torch.zeros_like(classes,dtype=torch.uint8)
         if self.domain == 'clean':
             domain_labels = domain_labels + 1
         elif self.domain == 'snowy':

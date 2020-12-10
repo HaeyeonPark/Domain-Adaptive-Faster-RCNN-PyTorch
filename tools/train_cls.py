@@ -66,7 +66,8 @@ def train(cfg, local_rank, distributed):
         target_data_loader = make_cls_data_loader(
             cfg,
             is_train=True,
-            domains=['foggy','snowy'],
+            #domains=['foggy','snowy'],
+            domains = ['clean','clean'],
             is_distributed=distributed,
             start_iter=arguments["iteration"],
         )

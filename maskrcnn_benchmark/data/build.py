@@ -241,8 +241,8 @@ def build_cls_dataset(dataset_list, transforms, dataset_catalog, is_train=True, 
 NUM_TARGET_DOMAINS = 2
 
 def make_cls_data_loader(cfg, is_train=True, domains=['clean'], is_distributed=False, start_iter=0):
-    if 'clean' in domains:
-        assert (len(domains)==1)
+    #if 'clean' in domains:
+    #    assert (len(domains)==1)
     num_gpus = get_world_size()
     if is_train:
         images_per_batch = cfg.SOLVER.IMS_PER_BATCH
@@ -304,7 +304,6 @@ def make_cls_data_loader(cfg, is_train=True, domains=['clean'], is_distributed=F
             for i,domain in enumerate(domains):
                 if domain == 'clean':
                     dataset_list.append(cfg.DATASETS.SOURCE_TRAIN)
-                    break
                 elif domain == 'foggy':
                     dataset_list.append(cfg.DATASETS.FOGGY_TRAIN)
                 elif domain == 'snowy':
@@ -319,7 +318,7 @@ def make_cls_data_loader(cfg, is_train=True, domains=['clean'], is_distributed=F
 
 
     transforms = build_transforms(cfg, is_train)
-    datasets = build_dataset(dataset_list, transforms, DatasetCatalog, is_train, domains)
+    datasets = build_cls_dataset(dataset_list, transforms, DatasetCatalog, is_train, domains)
 
     data_loaders = []
     for dataset in datasets:

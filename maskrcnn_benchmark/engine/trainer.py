@@ -216,7 +216,6 @@ def do_cls_da_train(
     source_data_loader = source_data_loaders[0]
     max_iter = len(source_data_loader)
     start_iter = arguments["iteration"]
-    num_target_domains = len(target_data_loaders)
     model.train()
     start_training_time = time.time()
     end = time.time()
@@ -232,10 +231,15 @@ def do_cls_da_train(
         data_time = time.time() - end
         arguments["iteration"] = iteration
 
-        (source_images,source_targets,_),(target1_images,target1_targets,_),(target2_images,target2_targets,_) = datas
+        # For multiple domains
+        #source_images,source_targets,_ = datas[0]
+        #targets_images,targets_targets = [],[]
+        #for data in datas[1:]:
+        #    targets
 
-        images = (source_images+target1_images+target2_images).to(device)
-        targets = [target.to(device) for target in list(source_targets+target1_targets+target2_targets)]
+        (source_images,source_targets,_),(target1_images,target1_targets,_),(target2_images,target2_targets,_) = datas
+        images = (source_images + target1_images + target2_images).to(device)
+        targets = [target.to(device) for target in list(source_targets + target1_targets + target2_targets)]
 
         loss_dict = model(images, targets)
 

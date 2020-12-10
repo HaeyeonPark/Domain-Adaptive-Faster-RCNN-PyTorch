@@ -300,6 +300,7 @@ class DomainDatasetCatalog(object):
 
     @staticmethod
     def get(name):
+        name = name[0]
         if "coco" in name:
             data_dir = DatasetCatalog.DATA_DIR
             attrs = DatasetCatalog.DATASETS[name]
