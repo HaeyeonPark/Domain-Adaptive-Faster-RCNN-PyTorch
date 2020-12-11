@@ -126,7 +126,10 @@ class DomainAdaptationModule(torch.nn.Module):
         img_grl_consist_fea = [self.grl_img_consist(fea) for fea in img_features]
         ins_grl_consist_fea = self.grl_ins_consist(da_ins_feature)
 
+        #eun0
+        # [num_domains, num_domains, h, w]
         da_img_features = self.imghead(img_grl_fea)
+        # [num_domains*num_instance,num_domains]
         da_ins_features = self.inshead(ins_grl_fea)
         da_img_consist_features = self.imghead(img_grl_consist_fea)
         da_ins_consist_features = self.inshead(ins_grl_consist_fea)

@@ -111,7 +111,7 @@ class COCODomainDataset(torchvision.datasets.coco.CocoDetection):
         self, ann_file, root, remove_images_without_annotations, transforms=None, domain= 'clean'
     ):
         super(COCODomainDataset, self).__init__(root, ann_file)
-        assert domain in ['clean','foggy','snowy']
+        #assert domain in ['clean','foggy','snowy']
         # sort indices for reproducible results
         self.ids = sorted(self.ids)
 

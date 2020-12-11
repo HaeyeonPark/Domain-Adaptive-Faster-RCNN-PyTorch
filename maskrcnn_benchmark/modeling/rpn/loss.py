@@ -53,6 +53,8 @@ class RPNLossComputation(object):
         matched_targets.add_field("matched_idxs", matched_idxs)
         return matched_targets
 
+    # Make mask 1 for source domain 0 for others
+    # and Prepare labels for object detection
     def prepare_targets(self, anchors, targets):
         labels = []
         regression_targets = []

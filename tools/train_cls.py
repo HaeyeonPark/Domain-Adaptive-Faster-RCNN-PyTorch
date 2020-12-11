@@ -56,14 +56,14 @@ def train(cfg, local_rank, distributed):
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
 
     if cfg.MODEL.DOMAIN_ADAPTATION_ON:
-        source_data_loader = make_cls_data_loader(
+        source_data_loaders = make_cls_data_loader(
             cfg,
             is_train=True,
             domains=['clean'],
             is_distributed=distributed,
             start_iter=arguments["iteration"],
         )
-        target_data_loader = make_cls_data_loader(
+        target_data_loaders = make_cls_data_loader(
             cfg,
             is_train=True,
             domains=['foggy','snowy'],
@@ -74,8 +74,8 @@ def train(cfg, local_rank, distributed):
 
         do_cls_da_train(
             model,
-            source_data_loader,
-            target_data_loader,
+            source_data_loaders,
+            target_data_loaders,
             optimizer,
             scheduler,
             checkpointer,

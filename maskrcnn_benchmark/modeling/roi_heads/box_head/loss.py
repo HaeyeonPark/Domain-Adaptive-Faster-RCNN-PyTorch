@@ -52,6 +52,8 @@ class FastRCNNLossComputation(object):
         return matched_targets
 
     #eun0
+    # Make domain labels
+    # and Prepare labels of object detecion
     def prepare_targets(self, proposals, targets, sample_for_da=False):
         labels = []
         regression_targets = []
