@@ -70,3 +70,67 @@ class GeneralizedRCNN(nn.Module):
             return losses
 
         return result
+
+
+class GeneralizedTripletRCNN(nn.Module):
+    """
+    Main class for Generalized R-CNN. Currently supports boxes and masks.
+    It consists of three main parts:
+    - backbone
+    - rpn
+    - heads: takes the features + the proposals from the RPN and computes
+        detections / masks from it.
+    """
+
+    def __init__(self, cfg):
+        super(GeneralizedTripletRCNN, self).__init__()
+
+        self.backbone = build_backbone(cfg)
+        self.rpn = build_rpn(cfg)
+        self.roi_heads = build_roi_heads(cfg)
+        self.da_heads = build_da_heads(cfg)
+
+    def forward(self, images, targets=None, anchors=None):
+        """
+        Arguments:
+            images (list[Tensor] or ImageList): images to be processed
+            targets (list[BoxList]): ground-truth boxes present in the image (optional)
+
+        Returns:
+            result (list[BoxList] or dict[Tensor]): the output from the model.
+                During training, it returns a dict[Tensor] which contains the losses.
+                During testing, it returns list[BoxList] contains additional fields
+                like `scores`, `labels` and `mask` (for Mask R-CNN models).
+
+        """
+        if self.training and targets is None:
+            raise ValueError("In training mode, targets should be passed")
+        if self.training and anchors is None:
+            raise ValueError("In training mode anchors should be passed")
+        images = to_image_list(images)
+        anchors = to_image_list(anchors)
+        features = self.backbone(images.tensors)
+        anchors_features = self.backbone(anchors.tensors)
+
+        proposals, proposal_losses = self.rpn(images, features, targets)
+        da_triplet_losses = {}
+        if self.roi_heads:
+            x, result, detector_losses, da_ins_feas, da_ins_labels = self.roi_heads(features, proposals, targets)
+            if self.da_heads:
+                assert targets
+                da_triplet_losses = self.da_heads(features,da_ins_feas, da_ins_labels, targets, anchors_features)
+
+        else:
+            # RPN-only models don't have roi_heads
+            x = features
+            result = proposals
+            detector_losses = {}
+
+        if self.training:
+            losses = {}
+            losses.update(detector_losses)
+            losses.update(proposal_losses)
+            losses.update(da_triplet_losses)
+            return losses
+
+        return result

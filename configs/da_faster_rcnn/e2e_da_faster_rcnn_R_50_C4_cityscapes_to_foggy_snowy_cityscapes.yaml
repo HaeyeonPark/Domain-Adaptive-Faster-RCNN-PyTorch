@@ -1,5 +1,5 @@
 MODEL:
-  META_ARCHITECTURE: "GeneralizedRCNN"
+  META_ARCHITECTURE: "GeneralizedTripletRCNN"
   WEIGHT: "catalog://ImageNetPretrained/MSRA/R-50"
   DOMAIN_ADAPTATION_ON: True
   RPN:

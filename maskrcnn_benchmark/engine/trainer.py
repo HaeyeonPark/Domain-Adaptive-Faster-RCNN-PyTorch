@@ -231,6 +231,10 @@ def do_cls_da_train(
         data_time = time.time() - end
         arguments["iteration"] = iteration
 
+        if iteration%2000==0:
+            (anchor_source,_,_),(anchor_target1,_,_),(anchor_target2,_,_) = datas
+            anchors = (anchor_source + anchor_target1 + anchor_target2).to(device)
+
         # For multiple domains
         #source_images,source_targets,_ = datas[0]
         #targets_images,targets_targets = [],[]
@@ -240,8 +244,9 @@ def do_cls_da_train(
         (source_images,source_targets,_),(target1_images,target1_targets,_),(target2_images,target2_targets,_) = datas
         images = (source_images + target1_images + target2_images).to(device)
         targets = [target.to(device) for target in list(source_targets + target1_targets + target2_targets)]
-
-        loss_dict = model(images, targets)
+        
+        assert anchors
+        loss_dict = model(images, targets, anchors)
 
         losses = sum(loss for loss in loss_dict.values())
 

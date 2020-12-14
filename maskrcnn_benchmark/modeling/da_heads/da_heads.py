@@ -104,7 +104,7 @@ class DomainAdaptationModule(torch.nn.Module):
         self.inshead = DAInsHead(num_ins_inputs)
         self.loss_evaluator = make_da_heads_loss_evaluator(cfg)
 
-    def forward(self, img_features, da_ins_feature, da_ins_labels, targets=None):
+    def forward(self, img_features, da_ins_feature, da_ins_labels, targets=None, anchors_features=None):
         """
         Arguments:
             img_features (list[Tensor]): features computed from the images that are
@@ -122,6 +122,8 @@ class DomainAdaptationModule(torch.nn.Module):
         da_ins_feature = da_ins_feature.view(da_ins_feature.size(0), -1)
 
         img_grl_fea = [self.grl_img(fea) for fea in img_features]
+        anc_grl_fea = [self.grl_img(fea) for fea in anchors_features]
+
         ins_grl_fea = self.grl_ins(da_ins_feature)
         img_grl_consist_fea = [self.grl_img_consist(fea) for fea in img_features]
         ins_grl_consist_fea = self.grl_ins_consist(da_ins_feature)
@@ -129,6 +131,8 @@ class DomainAdaptationModule(torch.nn.Module):
         #eun0
         # [num_domains, num_domains, h, w]
         da_img_features = self.imghead(img_grl_fea)
+        da_anc_features = self.imghead(anc_grl_fea)
+
         # [num_domains*num_instance,num_domains]
         da_ins_features = self.inshead(ins_grl_fea)
         da_img_consist_features = self.imghead(img_grl_consist_fea)
@@ -139,7 +143,13 @@ class DomainAdaptationModule(torch.nn.Module):
             da_img_loss, da_ins_loss, da_consistency_loss = self.loss_evaluator(
                 da_img_features, da_ins_features, da_img_consist_features, da_ins_consist_features, da_ins_labels, targets
             )
+
+            t0_loss = compute_triplet_loss(da_anc_features[0],da_img_features[0],da_img_features[1])
+            t1_loss = compute_triplet_loss(da_anc_features[0],da_img_features[0],da_img_features[2])
+            triplet_loss = t0_loss + t1_loss
+
             losses = {}
+            losses["triplet_loss"] = triplet_loss
             if self.img_weight > 0:
                 losses["loss_da_image"] = self.img_weight * da_img_loss
             if self.ins_weight > 0:
@@ -153,3 +163,14 @@ def build_da_heads(cfg):
     if cfg.MODEL.DOMAIN_ADAPTATION_ON:
         return DomainAdaptationModule(cfg)
     return []
+
+def compute_triplet_loss(anc_fea, pos_fea, neg_fea, margin=0.2):
+    anc_norm = anc_fea.div_(torch.norm(anc_fea,2))
+    pos_norm = pos_fea.div_(torch.norm(pos_fea,2))
+    neg_norm = pos_fea.div_(torch.norm(neg_fea,2))
+
+    pos = (anc_norm-pos_norm)**2
+    neg = (anc_norm-neg_norm)**2
+    return nn.ReLU(pos-neg+margin)
+
+
