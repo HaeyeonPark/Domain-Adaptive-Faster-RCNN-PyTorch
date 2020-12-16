@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 from __future__ import print_function
+from maskrcnn_benchmark.modeling.rpn.anchor_generator import AnchorGenerator
 from maskrcnn_benchmark.data.build import NUM_TARGET_DOMAINS
 import torch
 import torch.nn.functional as F
@@ -104,7 +105,7 @@ class DomainAdaptationModule(torch.nn.Module):
         self.inshead = DAInsHead(num_ins_inputs)
         self.loss_evaluator = make_da_heads_loss_evaluator(cfg)
 
-    def forward(self, img_features, da_ins_feature, da_ins_labels, targets=None, anchors_features=None):
+    def forward(self, img_features, da_ins_feature, da_ins_labels, targets=None, da_anc_ins_feas=None):
         """
         Arguments:
             img_features (list[Tensor]): features computed from the images that are
@@ -119,37 +120,43 @@ class DomainAdaptationModule(torch.nn.Module):
         """
         if self.resnet_backbone:
             da_ins_feature = self.avgpool(da_ins_feature)
-        da_ins_feature = da_ins_feature.view(da_ins_feature.size(0), -1)
+            da_anc_ins_feas = self.avgpool(da_anc_ins_feas) # [768,2048,7,7]
 
         img_grl_fea = [self.grl_img(fea) for fea in img_features]
         assert len(img_grl_fea)==1
-        anc_grl_fea = [self.grl_img(fea) for fea in anchors_features]
-
-        img_flat = img_grl_fea[0].view(img_grl_fea[0].size(0),-1)
-        anc_flat = anc_grl_fea[0].view(anc_grl_fea[0].size(0),-1)
-
-        img_norm = torch.nn.functional.normalize(img_flat,p=2,dim=1)
-        anc_norm = torch.nn.functional.normalize(anc_flat,p=2,dim=1)
-
-        ancs = torch.stack([anc_norm[0],anc_norm[1],anc_norm[2]])
-        pos = torch.stack([img_norm[0],img_norm[1],img_norm[2]])
-        neg = torch.stack([img_norm[1],img_norm[2],img_norm[0]])
-        
-        # debug
-        #margin=3
-        margin = 0.2
-        tl = compute_triplet_loss(ancs,pos,neg,margin=margin)
-
         ins_grl_fea = self.grl_ins(da_ins_feature)
         img_grl_consist_fea = [self.grl_img_consist(fea) for fea in img_features]
         ins_grl_consist_fea = self.grl_ins_consist(da_ins_feature)
+        
+        #eun0
+        anc_grl_fea = self.grl_ins(da_anc_ins_feas)
 
+        ins_grl_fea = ins_grl_fea.view(ins_grl_fea.size(0), -1)
+        anc_grl_fea = anc_grl_fea.view(anc_grl_fea.size(0),-1) # [768,2048]
+
+        # 768/3 = 256
+        da_ins = ins_grl_fea.view(3,256,-1)
+        da_anc = anc_grl_fea.view(3,256,-1)
+
+        da_ins = torch.mean(da_ins,dim=1) # [3,2048]
+        da_anc = torch.mean(da_anc,dim=1) # [3,2048]
+
+        da_ins = torch.nn.functional.normalize(da_ins,p=2,dim=1)
+        da_anc = torch.nn.functional.normalize(da_anc,p=2,dim=1)
+
+        ancs = torch.stack([da_anc[0],da_anc[1],da_anc[2]])
+        pos = torch.stack([da_ins[0],da_ins[1],da_ins[2]])
+        neg = torch.stack([da_ins[1],da_ins[2],da_ins[0]])
+
+        margin = 0.2
+        tl = compute_triplet_loss(ancs,pos,neg,margin=margin)
+        
         #eun0
         # [num_domains, num_domains, h, w]
         da_img_features = self.imghead(img_grl_fea)
 
         # [num_domains*num_instance,num_domains]
-        da_ins_features = self.inshead(ins_grl_fea)
+        da_ins_features = self.inshead(ins_grl_fea) # [768,3]
         da_img_consist_features = self.imghead(img_grl_consist_fea)
         da_ins_consist_features = self.inshead(ins_grl_consist_fea)
         #da_img_consist_features = [fea.sigmoid() for fea in da_img_consist_features]
