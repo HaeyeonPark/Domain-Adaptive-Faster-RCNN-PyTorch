@@ -50,7 +50,7 @@ def main():
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     cfg.OUTPUT_DIR = args.output_dir
-    cfg.MODEL.DEVICE = 'cpu'
+    #cfg.MODEL.DEVICE = 'cpu'
     #cfg.merge_from_list(args.output_dir)
     cfg.freeze()
 
