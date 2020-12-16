@@ -110,6 +110,7 @@ class GeneralizedTripletRCNN(nn.Module):
         images = to_image_list(images)
         anchors = to_image_list(anchors)
         features = self.backbone(images.tensors)
+        #debug
         anchors_features = self.backbone(anchors.tensors)
 
         proposals, proposal_losses = self.rpn(images, features, targets)
@@ -119,6 +120,7 @@ class GeneralizedTripletRCNN(nn.Module):
             if self.da_heads:
                 assert targets
                 da_triplet_losses = self.da_heads(features,da_ins_feas, da_ins_labels, targets, anchors_features)
+                #da_triplet_losses = self.da_heads(features,da_ins_feas, da_ins_labels, targets, features)
 
         else:
             # RPN-only models don't have roi_heads

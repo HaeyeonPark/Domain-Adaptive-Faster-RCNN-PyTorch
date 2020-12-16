@@ -39,7 +39,7 @@ class DALossComputation(object):
             mask_per_image = domains.new_ones(1, dtype=torch.uint8) if (domains==1).any() else domains.new_zeros(1, dtype=torch.uint8)
             masks.append(mask_per_image)
         return masks
-
+    
     def __call__(self, da_img, da_ins, da_img_consist, da_ins_consist, da_ins_labels, targets):
         """
         Arguments:
@@ -56,7 +56,7 @@ class DALossComputation(object):
             da_consist_loss (Tensor)
         """
 
-        #masks = self.prepare_masks(targets)
+        #masks = self.prepare_masks(targets) eun0
         #masks = torch.cat(masks, dim=0)
 
         da_img_flattened = []
