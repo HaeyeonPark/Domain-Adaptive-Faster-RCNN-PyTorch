@@ -298,9 +298,9 @@ def make_cls_data_loader(cfg, is_train=True, domains=['clean'], is_distributed=F
     )
     DatasetCatalog = paths_catalog.DomainDatasetCatalog
 
+    dataset_list = []
     if is_train:
         if cfg.MODEL.DOMAIN_ADAPTATION_ON:
-            dataset_list = []
             for i,domain in enumerate(domains):
                 if domain == 'clean':
                     dataset_list.append(cfg.DATASETS.SOURCE_TRAIN)
@@ -312,9 +312,10 @@ def make_cls_data_loader(cfg, is_train=True, domains=['clean'], is_distributed=F
                     dataset_list = None
                     raise NotImplementedError("Unknown domain")
         else:
-            dataset_list = cfg.DATASETS.TRAIN
+            raise NotImplementedError()
     else:
-        dataset_list = cfg.DATASETS.TEST
+        dataset_list.append(cfg.DATASETS.TEST)
+            
 
 
     transforms = build_transforms(cfg, is_train)

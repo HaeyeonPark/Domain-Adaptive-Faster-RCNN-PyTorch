@@ -108,16 +108,20 @@ class GeneralizedTripletRCNN(nn.Module):
         if self.training and anchors is None:
             raise ValueError("In training mode anchors should be passed")
         images = to_image_list(images)
-        anchors = to_image_list(anchors)
         features = self.backbone(images.tensors)
+        anchors_features=None
+        if anchors is not None:
+            anchors = to_image_list(anchors)
+            anchors_features = self.backbone(anchors.tensors)
+        
         #debug
-        anchors_features = self.backbone(anchors.tensors)
+        
 
         proposals, proposal_losses = self.rpn(images, features, targets)
         da_triplet_losses = {}
         if self.roi_heads:
             x, result, detector_losses, da_ins_feas, da_ins_labels = self.roi_heads(features, proposals, targets)
-            if self.da_heads:
+            if self.da_heads and anchors is not None:
                 assert targets
                 da_triplet_losses = self.da_heads(features,da_ins_feas, da_ins_labels, targets, anchors_features)
                 #da_triplet_losses = self.da_heads(features,da_ins_feas, da_ins_labels, targets, features)
