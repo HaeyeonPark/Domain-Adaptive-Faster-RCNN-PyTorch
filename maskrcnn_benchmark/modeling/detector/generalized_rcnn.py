@@ -115,7 +115,7 @@ class GeneralizedTripletRCNN(nn.Module):
         da_triplet_losses = {}
         if self.roi_heads:
             x, result, detector_losses, da_ins_feas, da_ins_labels = self.roi_heads(features, proposals, targets)
-            if self.da_heads and anchors is not None:
+            if self.da_heads and targets is not None:
                 assert targets
                 anchors = to_image_list(anchors)
                 anchors_features = self.backbone(anchors.tensors)

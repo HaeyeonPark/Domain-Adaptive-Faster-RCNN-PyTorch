@@ -33,7 +33,7 @@ def main():
         default=None,
         nargs=argparse.REMAINDER,
     )
-    parser.add_argument("--output-dir",default="cls/")
+    #parser.add_argument("--output-dir",default="cls/")
 
     args = parser.parse_args()
 
@@ -49,7 +49,7 @@ def main():
 
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
-    cfg.OUTPUT_DIR = args.output_dir
+    #cfg.OUTPUT_DIR = args.output_dir
     #cfg.MODEL.DEVICE = 'cpu'
     #cfg.merge_from_list(args.output_dir)
     cfg.freeze()

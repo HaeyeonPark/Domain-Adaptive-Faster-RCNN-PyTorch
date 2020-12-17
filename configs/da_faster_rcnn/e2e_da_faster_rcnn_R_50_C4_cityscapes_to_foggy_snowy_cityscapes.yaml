@@ -20,8 +20,10 @@ DATASETS:
   SOURCE_TRAIN: ("cityscapes_fine_instanceonly_seg_train_cocostyle",)
   FOGGY_TRAIN: ("foggy_cityscapes_fine_instanceonly_seg_train_cocostyle",)
   SNOWY_TRAIN: ("snowy_cityscapes_fine_instanceonly_seg_train_cocostyle",)
-  #TEST: ("foggy_cityscapes_fine_instanceonly_seg_val_cocostyle",)
-  TEST: ("cityscapes_fine_instanceonly_seg_val_cocostyle",)
+  #TEST: ("cityscapes_fine_instanceonly_seg_val_cocostyle",)
+  TEST: ("foggy_cityscapes_fine_instanceonly_seg_val_cocostyle",)
+  #TEST: ("snowy_cityscapes_fine_instanceonly_seg_val_cocostyle",)
+  
 INPUT:
   MIN_SIZE_TRAIN: (600,)
   MAX_SIZE_TRAIN: 1200
