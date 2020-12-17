@@ -170,7 +170,7 @@ class DomainAdaptationModule(torch.nn.Module):
             )
 
             losses = {}
-            losses["triplet_loss"] = tl
+            losses["ins_triplet_loss"] = tl
             if self.img_weight > 0:
                 losses["loss_da_image"] = self.img_weight * da_img_loss
             if self.ins_weight > 0:
