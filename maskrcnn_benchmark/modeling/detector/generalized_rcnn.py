@@ -119,8 +119,8 @@ class GeneralizedTripletRCNN(nn.Module):
                 assert targets
                 anchors = to_image_list(anchors)
                 anchors_features = self.backbone(anchors.tensors)
-                anc_proposals,_ = self.rpn(anchors,anchors_features)
-                _,_,_,da_anc_ins_feas,_ = self.roi_heads(anchors_features,anc_proposals)
+                anc_proposals,_ = self.rpn(anchors,anchors_features,targets)
+                _,_,_,da_anc_ins_feas,_ = self.roi_heads(anchors_features,anc_proposals,targets)
                 #debug
                 #da_triplet_losses = self.da_heads(features,da_ins_feas, da_ins_labels, targets, da_ins_feas)
                 da_triplet_losses = self.da_heads(features,da_ins_feas, da_ins_labels, targets, da_anc_ins_feas)

@@ -105,6 +105,7 @@ class DomainAdaptationModule(torch.nn.Module):
         self.inshead = DAInsHead(num_ins_inputs)
         self.loss_evaluator = make_da_heads_loss_evaluator(cfg)
 
+    #eun0
     def forward(self, img_features, da_ins_feature, da_ins_labels, targets=None, da_anc_ins_feas=None):
         """
         Arguments:
@@ -120,18 +121,20 @@ class DomainAdaptationModule(torch.nn.Module):
         """
         if self.resnet_backbone:
             da_ins_feature = self.avgpool(da_ins_feature)
-            da_anc_ins_feas = self.avgpool(da_anc_ins_feas) # [768,2048,7,7]
+            da_anc_ins_feas = self.avgpool(da_anc_ins_feas) # [768,2048,1,1]
 
         img_grl_fea = [self.grl_img(fea) for fea in img_features]
         assert len(img_grl_fea)==1
+        assert (da_ins_labels==1).sum().item()==256
         ins_grl_fea = self.grl_ins(da_ins_feature)
         img_grl_consist_fea = [self.grl_img_consist(fea) for fea in img_features]
         ins_grl_consist_fea = self.grl_ins_consist(da_ins_feature)
         
-        #eun0
+        
         anc_grl_fea = self.grl_ins(da_anc_ins_feas)
 
         ins_grl_fea = ins_grl_fea.view(ins_grl_fea.size(0), -1)
+        ins_grl_consist_fea = ins_grl_consist_fea.view(ins_grl_consist_fea.size(0), -1)
         anc_grl_fea = anc_grl_fea.view(anc_grl_fea.size(0),-1) # [768,2048]
 
         # 768/3 = 256

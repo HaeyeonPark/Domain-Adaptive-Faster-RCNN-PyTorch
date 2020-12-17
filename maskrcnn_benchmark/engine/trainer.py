@@ -71,7 +71,6 @@ def do_cls_da_train(
         if iteration%2000==0:
             (anchor_source,_,_),(anchor_target1,_,_),(anchor_target2,_,_) = datas
             anchors = (anchor_source + anchor_target1 + anchor_target2).to(device)
-            del anchor_source,anchor_target1,anchor_target2
 
         # For multiple domains
         #source_images,source_targets,_ = datas[0]
