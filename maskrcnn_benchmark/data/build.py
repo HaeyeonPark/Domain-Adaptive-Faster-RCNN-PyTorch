@@ -271,7 +271,7 @@ def make_cls_data_loader(cfg, is_train=True, domains=['clean'], is_distributed=F
         ), "TEST.IMS_PER_BATCH ({}) must be divisible by the number "
         "of GPUs ({}) used.".format(images_per_batch, num_gpus)
         images_per_gpu = images_per_batch // num_gpus
-        shuffle = False if not is_distributed else True
+        shuffle = False
         num_iters = None
         start_iter = 0
 
