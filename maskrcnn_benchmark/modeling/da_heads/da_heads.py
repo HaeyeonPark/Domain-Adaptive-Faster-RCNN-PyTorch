@@ -137,7 +137,7 @@ class DomainAdaptationModule(torch.nn.Module):
         ins_grl_consist_fea = ins_grl_consist_fea.view(ins_grl_consist_fea.size(0), -1)
         anc_grl_fea = anc_grl_fea.view(anc_grl_fea.size(0),-1) # [768,2048]
 
-        '''
+        
         # 768/3 = 256
         da_ins = ins_grl_fea.view(3,256,-1) # 3*256*2048
         da_anc = anc_grl_fea.view(3,256,-1) # 3*256*2048
@@ -153,10 +153,10 @@ class DomainAdaptationModule(torch.nn.Module):
         neg_cand = torch.norm(da_ins - da_ancOfanc_t,2,dim=2)
         n,n_idx =torch.sort(neg_cand,dim=1)
 
-        tl = sampling_triplet_loss(p,n,0,100.2,2)
+        tl = sampling_triplet_loss(p,n,100,0.2,2)
         #tmp = sampling_triplet_loss(p,n,255,0.2,2) 
         ###########################
-        
+        '''
         
         da_ins = torch.mean(da_ins,dim=1) # [3,2048]
         da_anc = torch.mean(da_anc,dim=1) # [3,2048]
@@ -192,7 +192,7 @@ class DomainAdaptationModule(torch.nn.Module):
             )
 
             losses = {}
-            #losses["ins_triplet_loss"] = tl
+            losses["ins_triplet_loss"] = tl
             if self.img_weight > 0:
                 losses["loss_da_image"] = self.img_weight * da_img_loss
             if self.ins_weight > 0:
