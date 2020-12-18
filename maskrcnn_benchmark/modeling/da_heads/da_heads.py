@@ -157,7 +157,7 @@ class DomainAdaptationModule(torch.nn.Module):
         pos = torch.stack([img_flat[0],img_flat[1],img_flat[2]])
         neg = torch.stack([img_flat[1],img_flat[2],img_flat[0]])
 
-        margin = 0.2
+        margin = 0.7
         img_tl = compute_triplet_loss(ancs,pos,neg,margin=margin)
 
         da_ins = da_ins_features.view(3,256,-1) # [3,256,1]
@@ -166,8 +166,8 @@ class DomainAdaptationModule(torch.nn.Module):
         da_ins = torch.mean(da_ins,dim=1) # [3,1]
         da_anc = torch.mean(da_anc,dim=1)
 
-        da_ins = torch.nn.functional.normalize(da_ins,p=2,dim=1)
-        da_anc = torch.nn.functional.normalize(da_anc,p=2,dim=1)
+        #da_ins = torch.nn.functional.normalize(da_ins,p=2,dim=1)
+        #da_anc = torch.nn.functional.normalize(da_anc,p=2,dim=1)
 
         ancs_ins = torch.stack([da_anc[0],da_anc[1],da_anc[2]])
         pos_ins = torch.stack([da_ins[0],da_ins[1],da_ins[2]])
