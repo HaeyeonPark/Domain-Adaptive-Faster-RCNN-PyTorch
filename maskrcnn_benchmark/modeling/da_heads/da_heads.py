@@ -137,10 +137,27 @@ class DomainAdaptationModule(torch.nn.Module):
         ins_grl_consist_fea = ins_grl_consist_fea.view(ins_grl_consist_fea.size(0), -1)
         anc_grl_fea = anc_grl_fea.view(anc_grl_fea.size(0),-1) # [768,2048]
 
+        '''
         # 768/3 = 256
-        da_ins = ins_grl_fea.view(3,256,-1)
-        da_anc = anc_grl_fea.view(3,256,-1)
+        da_ins = ins_grl_fea.view(3,256,-1) # 3*256*2048
+        da_anc = anc_grl_fea.view(3,256,-1) # 3*256*2048
 
+        da_ins = torch.nn.functional.normalize(da_ins,p=2,dim=2)
+
+        da_ancOfanc = da_anc[[0,1,2],[0]].unsqueeze(1) #first sample of each domain
+        da_ancOfanc = torch.nn.functional.normalize(da_ancOfanc,p=2,dim=2) #####
+        pos_cand = torch.norm(da_ins - da_ancOfanc,2,dim=2)
+        p,p_idx = torch.sort(pos_cand,dim=1)
+
+        da_ancOfanc_t = torch.cat([da_ancOfanc[2],da_ancOfanc[0],da_ancOfanc[1]],dim=0).unsqueeze(1)
+        neg_cand = torch.norm(da_ins - da_ancOfanc_t,2,dim=2)
+        n,n_idx =torch.sort(neg_cand,dim=1)
+
+        tl = sampling_triplet_loss(p,n,0,100.2,2)
+        #tmp = sampling_triplet_loss(p,n,255,0.2,2) 
+        ###########################
+        
+        
         da_ins = torch.mean(da_ins,dim=1) # [3,2048]
         da_anc = torch.mean(da_anc,dim=1) # [3,2048]
 
@@ -153,6 +170,7 @@ class DomainAdaptationModule(torch.nn.Module):
 
         margin = 0.2
         tl = compute_triplet_loss(ancs,pos,neg,margin=margin)
+        '''
         
         #eun0
         # [num_domains, num_domains, h, w]
@@ -162,6 +180,10 @@ class DomainAdaptationModule(torch.nn.Module):
         da_ins_features = self.inshead(ins_grl_fea) # [768,3]
         da_img_consist_features = self.imghead(img_grl_consist_fea)
         da_ins_consist_features = self.inshead(ins_grl_consist_fea)
+
+        da_img_consist_features = [torch.nn.functional.softmax(fea,dim=1) for fea in da_img_consist_features]
+        da_ins_consist_features = torch.nn.functional.softmax(da_ins_consist_features,dim=1)
+
         #da_img_consist_features = [fea.sigmoid() for fea in da_img_consist_features]
         #da_ins_consist_features = da_ins_consist_features.sigmoid()
         if self.training:
@@ -170,7 +192,7 @@ class DomainAdaptationModule(torch.nn.Module):
             )
 
             losses = {}
-            losses["ins_triplet_loss"] = tl
+            #losses["ins_triplet_loss"] = tl
             if self.img_weight > 0:
                 losses["loss_da_image"] = self.img_weight * da_img_loss
             if self.ins_weight > 0:
@@ -184,7 +206,7 @@ def build_da_heads(cfg):
     if cfg.MODEL.DOMAIN_ADAPTATION_ON:
         return DomainAdaptationModule(cfg)
     return []
-
+'''
 def compute_triplet_loss(ancs, pos, neg, margin=0.2, p=2):
 
     # [num_domains, h, w]
@@ -194,5 +216,13 @@ def compute_triplet_loss(ancs, pos, neg, margin=0.2, p=2):
     loss = nn.ReLU()(d_pos-d_neg+margin)
     reduced_loss = torch.mean(loss)
     return reduced_loss
-
-
+'''
+def sampling_triplet_loss(pos,neg,diff,margin=0.2,p=2):
+    # diff : 0~ 255 0: easy 255: difficult
+    #m = torch.Tensor([margin])
+    l = torch.cat([(pos[0][diff] - neg[1][255-diff]).unsqueeze(0) 
+    ,(pos[1][diff] - neg[2][255-diff]).unsqueeze(0)
+    ,(pos[2][diff] - neg[0][255-diff]).unsqueeze(0)],dim=0)
+    loss = nn.ReLU()(l+margin)
+    reduced_loss = torch.mean(loss)
+    return reduced_loss

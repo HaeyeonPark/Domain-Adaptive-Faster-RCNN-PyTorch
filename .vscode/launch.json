@@ -21,10 +21,16 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
+            //"program": "/home/imlab/anaconda3/envs/MASKRCNN2/lib/python3.6/site-packages/torch/distributed/launch.py",
             "args": [
-                "--config-file",
-                "configs/da_faster_rcnn/e2e_da_faster_rcnn_R_50_C4_cityscapes_to_foggy_snowy_cityscapes.yaml",
-            ]
+                //"--nproc_per_node","3",
+                //"/home/imlab/haeyeon/cvproject/triplet/Domain-Adaptive-Faster-RCNN-PyTorch/tools/train_cls.py",
+                "--config-file","configs/da_faster_rcnn/e2e_da_faster_rcnn_R_50_C4_cityscapes_to_foggy_snowy_cityscapes.yaml",
+                "SOLVER.IMS_PER_BATCH","3",
+                "OUTPUT_DIR","/home/imlab/haeyeon/cvproject/triplet/Domain-Adaptive-Faster-RCNN-PyTorch/output/tmp"
+            ],
+            "cwd":"/home/imlab/haeyeon/cvproject/triplet/Domain-Adaptive-Faster-RCNN-PyTorch",
+            "justMyCode": false
         }
     ]
 }
