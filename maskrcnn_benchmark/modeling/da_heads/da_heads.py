@@ -10,7 +10,8 @@ from maskrcnn_benchmark.layers import GradientScalarLayer
 from .loss import make_da_heads_loss_evaluator
 
 #eun0
-NUM_TARGET_DOMAINS = 2
+# when no cls
+NUM_TARGET_DOMAINS = 0
 class DAImgHead(nn.Module):
     """
     Adds a simple Image-level Domain Classifier head
@@ -25,7 +26,8 @@ class DAImgHead(nn.Module):
         super(DAImgHead, self).__init__()
         
         self.conv1_da = nn.Conv2d(in_channels, 512, kernel_size=1, stride=1)
-        self.conv2_da = nn.Conv2d(512, NUM_TARGET_DOMAINS + 1, kernel_size=1, stride=1)
+        
+        self.conv2_da = nn.Conv2d(512, NUM_TARGET_DOMAINS+1, kernel_size=1, stride=1)
 
         for l in [self.conv1_da, self.conv2_da]:
             torch.nn.init.normal_(l.weight, std=0.001)
@@ -92,12 +94,13 @@ class DomainAdaptationModule(torch.nn.Module):
         
         self.img_weight = cfg.MODEL.DA_HEADS.DA_IMG_LOSS_WEIGHT
         self.ins_weight = cfg.MODEL.DA_HEADS.DA_INS_LOSS_WEIGHT
-        self.cst_weight = cfg.MODEL.DA_HEADS.DA_CST_LOSS_WEIGHT
+        #self.cst_weight = cfg.MODEL.DA_HEADS.DA_CST_LOSS_WEIGHT
+        self.cst_weight = 0
 
         self.grl_img = GradientScalarLayer(-1.0*self.cfg.MODEL.DA_HEADS.DA_IMG_GRL_WEIGHT)
         self.grl_ins = GradientScalarLayer(-1.0*self.cfg.MODEL.DA_HEADS.DA_INS_GRL_WEIGHT)
-        self.grl_img_consist = GradientScalarLayer(1.0*self.cfg.MODEL.DA_HEADS.DA_IMG_GRL_WEIGHT)
-        self.grl_ins_consist = GradientScalarLayer(1.0*self.cfg.MODEL.DA_HEADS.DA_INS_GRL_WEIGHT)
+        #self.grl_img_consist = GradientScalarLayer(1.0*self.cfg.MODEL.DA_HEADS.DA_IMG_GRL_WEIGHT)
+        #self.grl_ins_consist = GradientScalarLayer(1.0*self.cfg.MODEL.DA_HEADS.DA_INS_GRL_WEIGHT)
         
         in_channels = cfg.MODEL.BACKBONE.OUT_CHANNELS
 
@@ -106,7 +109,7 @@ class DomainAdaptationModule(torch.nn.Module):
         self.loss_evaluator = make_da_heads_loss_evaluator(cfg)
 
     #eun0
-    def forward(self, img_features, da_ins_feature, da_ins_labels, targets=None, da_anc_ins_feas=None):
+    def forward(self, img_features, da_ins_feature, da_ins_labels, targets=None, anc_features=None,da_anc_ins_feature=None):
         """
         Arguments:
             img_features (list[Tensor]): features computed from the images that are
@@ -119,64 +122,66 @@ class DomainAdaptationModule(torch.nn.Module):
             losses (dict[Tensor]): the losses for the model during training. During
                 testing, it is an empty dict.
         """
+
         if self.resnet_backbone:
             da_ins_feature = self.avgpool(da_ins_feature)
-            da_anc_ins_feas = self.avgpool(da_anc_ins_feas) # [768,2048,1,1]
+            da_anc_ins_feature = self.avgpool(da_anc_ins_feature)
+
+        da_ins_feature = da_ins_feature.view(da_ins_feature.size(0),-1)
+        da_anc_ins_feature = da_anc_ins_feature.view(da_anc_ins_feature.size(0),-1)
 
         img_grl_fea = [self.grl_img(fea) for fea in img_features]
+        anc_img_grl_fea = [self.grl_img(fea) for fea in anc_features]
         assert len(img_grl_fea)==1
         assert (da_ins_labels==1).sum().item()==256
         ins_grl_fea = self.grl_ins(da_ins_feature)
-        img_grl_consist_fea = [self.grl_img_consist(fea) for fea in img_features]
-        ins_grl_consist_fea = self.grl_ins_consist(da_ins_feature)
+        anc_ins_grl_fea = self.grl_ins(da_anc_ins_feature)
+
+        da_img_features = self.imghead(img_grl_fea)
+        da_anc_img_features = self.imghead(anc_img_grl_fea)
+        da_ins_features = self.inshead(ins_grl_fea) # [768,3]
+        da_anc_ins_features = self.inshead(anc_ins_grl_fea)       
         
-        
-        anc_grl_fea = self.grl_ins(da_anc_ins_feas)
+        img_flat = da_img_features[0].view(da_img_features[0].size(0),-1)
+        anc_flat = da_anc_img_features[0].view(da_anc_img_features[0].size(0),-1)
 
-        ins_grl_fea = ins_grl_fea.view(ins_grl_fea.size(0), -1)
-        ins_grl_consist_fea = ins_grl_consist_fea.view(ins_grl_consist_fea.size(0), -1)
-        anc_grl_fea = anc_grl_fea.view(anc_grl_fea.size(0),-1) # [768,2048]
+        img_flat = torch.nn.functional.normalize(img_flat,p=2,dim=1)
+        anc_flat = torch.nn.functional.normalize(anc_flat,p=2,dim=1)
 
-        # 768/3 = 256
-        da_ins = ins_grl_fea.view(3,256,-1)
-        da_anc = anc_grl_fea.view(3,256,-1)
 
-        da_ins = torch.mean(da_ins,dim=1) # [3,2048]
-        da_anc = torch.mean(da_anc,dim=1) # [3,2048]
-
-        da_ins = torch.nn.functional.normalize(da_ins,p=2,dim=1)
-        da_anc = torch.nn.functional.normalize(da_anc,p=2,dim=1)
-
-        ancs = torch.stack([da_anc[0],da_anc[1],da_anc[2]])
-        pos = torch.stack([da_ins[0],da_ins[1],da_ins[2]])
-        neg = torch.stack([da_ins[1],da_ins[2],da_ins[0]])
+        ancs = torch.stack([anc_flat[0],anc_flat[1],anc_flat[2]])
+        pos = torch.stack([img_flat[0],img_flat[1],img_flat[2]])
+        neg = torch.stack([img_flat[1],img_flat[2],img_flat[0]])
 
         margin = 0.2
-        tl = compute_triplet_loss(ancs,pos,neg,margin=margin)
-        
-        #eun0
-        # [num_domains, num_domains, h, w]
-        da_img_features = self.imghead(img_grl_fea)
+        img_tl = compute_triplet_loss(ancs,pos,neg,margin=margin)
 
-        # [num_domains*num_instance,num_domains]
-        da_ins_features = self.inshead(ins_grl_fea) # [768,3]
-        da_img_consist_features = self.imghead(img_grl_consist_fea)
-        da_ins_consist_features = self.inshead(ins_grl_consist_fea)
-        #da_img_consist_features = [fea.sigmoid() for fea in da_img_consist_features]
-        #da_ins_consist_features = da_ins_consist_features.sigmoid()
+        ins_flat = da_ins_features.view(da_ins_features.size(0),-1)
+        ins_anc_flat = da_anc_ins_features.view(da_anc_ins_features.size(0),-1)
+
+        ins_flat = torch.nn.functional.normalize(ins_flat,p=2,dim=1)
+        ins_anc_flat = torch.nn.functional.normalize(ins_anc_flat,p=2,dim=1)
+
+        ancs_ins = torch.stack([ins_anc_flat[0],ins_anc_flat[1],ins_anc_flat[2]])
+        pos_ins = torch.stack([ins_flat[0],ins_flat[1],ins_flat[2]])
+        neg_ins = torch.stack([ins_flat[1],ins_flat[2],ins_flat[0]])
+
+        ins_tl = compute_triplet_loss(ancs_ins,pos_ins,neg_ins,margin=margin)
+
         if self.training:
-            da_img_loss, da_ins_loss, da_consistency_loss = self.loss_evaluator(
-                da_img_features, da_ins_features, da_img_consist_features, da_ins_consist_features, da_ins_labels, targets
-            )
+            #da_img_loss, da_ins_loss, da_consistency_loss = self.loss_evaluator(
+            #    da_img_features, da_ins_features, da_img_consist_features, da_ins_consist_features, da_ins_labels, targets
+            #)
 
             losses = {}
-            losses["ins_triplet_loss"] = tl
-            if self.img_weight > 0:
-                losses["loss_da_image"] = self.img_weight * da_img_loss
-            if self.ins_weight > 0:
-                losses["loss_da_instance"] = self.ins_weight * da_ins_loss
-            if self.cst_weight > 0:
-                losses["loss_da_consistency"] = self.cst_weight * da_consistency_loss
+            losses["img_triplet_loss_no_cls"] = img_tl
+            losses["ins_triplet_loss_no_cls"] = ins_tl
+            #if self.img_weight > 0:
+            #    losses["loss_da_image"] = self.img_weight * da_img_loss
+            #if self.ins_weight > 0:
+            #    losses["loss_da_instance"] = self.ins_weight * da_ins_loss
+            #if self.cst_weight > 0:
+            #    losses["loss_da_consistency"] = self.cst_weight * da_consistency_loss
             return losses
         return {}
 

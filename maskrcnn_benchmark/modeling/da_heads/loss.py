@@ -89,7 +89,8 @@ class DALossComputation(object):
             torch.squeeze(da_ins), da_ins_labels.type(torch.cuda.LongTensor)
         )
 
-        da_consist_loss = consistency_loss(da_img_consist, da_ins_consist, da_ins_labels, size_average=True)
+        #da_consist_loss = consistency_loss(da_img_consist, da_ins_consist, da_ins_labels, size_average=True)
+        da_consist_loss = 0
 
         return da_img_loss, da_ins_loss, da_consist_loss
 

@@ -90,7 +90,7 @@ class GeneralizedTripletRCNN(nn.Module):
         self.roi_heads = build_roi_heads(cfg)
         self.da_heads = build_da_heads(cfg)
 
-    def forward(self, images, targets=None, anchors=None):
+    def forward(self, images, targets=None, anc_images=None):
         """
         Arguments:
             images (list[Tensor] or ImageList): images to be processed
@@ -105,25 +105,25 @@ class GeneralizedTripletRCNN(nn.Module):
         """
         if self.training and targets is None:
             raise ValueError("In training mode, targets should be passed")
-        if self.training and anchors is None:
-            raise ValueError("In training mode anchors should be passed")
         images = to_image_list(images)
         features = self.backbone(images.tensors)
-   
+         
+        # debug
+        anc_features = [features[0].clone()]
+        #if anc_images is not None:
+        #    anc_images = to_image_list(anc_images)
+        #    anc_features = self.backbone(anc_images.tensors)
+        
+        
+
         proposals, proposal_losses = self.rpn(images, features, targets)
         
         da_triplet_losses = {}
         if self.roi_heads:
             x, result, detector_losses, da_ins_feas, da_ins_labels = self.roi_heads(features, proposals, targets)
-            if self.da_heads and targets is not None:
-                assert targets
-                anchors = to_image_list(anchors)
-                anchors_features = self.backbone(anchors.tensors)
-                anc_proposals,_ = self.rpn(anchors,anchors_features,targets)
-                _,_,_,da_anc_ins_feas,_ = self.roi_heads(anchors_features,anc_proposals,targets)
-                #debug
-                #da_triplet_losses = self.da_heads(features,da_ins_feas, da_ins_labels, targets, da_ins_feas)
-                da_triplet_losses = self.da_heads(features,da_ins_feas, da_ins_labels, targets, da_anc_ins_feas)
+            if self.da_heads and self.training:
+
+                da_triplet_losses = self.da_heads(features, da_ins_feas, da_ins_labels, targets, anc_features)
                 
         else:
             # RPN-only models don't have roi_heads

@@ -68,23 +68,25 @@ def do_cls_da_train(
         data_time = time.time() - end
         arguments["iteration"] = iteration
 
-        if iteration%2000==0:
-            (anchor_source,_,_),(anchor_target1,_,_),(anchor_target2,_,_) = datas
-            anchors = (anchor_source + anchor_target1 + anchor_target2).to(device)
-
+        #debug
+        #if iteration%2000==0:
+        #    (anchor_source,anc_src_trg,_),(anchor_target0,anc_trg0_trg,_),(anchor_target2,anc_trg2_trg,_) = datas
+        #    anc_images = (anchor_source + anchor_target0 + anchor_target2).to(device)
+        
         # For multiple domains
         #source_images,source_targets,_ = datas[0]
         #targets_images,targets_targets = [],[]
         #for data in datas[1:]:
         #    targets
-
         (source_images,source_targets,_),(target1_images,target1_targets,_),(target2_images,target2_targets,_) = datas
-        images = (source_images + target1_images + target2_images).to(device)
+        images  = (source_images + target1_images + target2_images).to(device)
+        
         targets = [target.to(device) for target in list(source_targets + target1_targets + target2_targets)]
         
-        assert anchors
-        #test
-        loss_dict = model(images, targets, anchors)
+        #assert anchors
+        #debug
+        loss_dict = model(images,targets,images)
+        #loss_dict = model(images,targets,anc_images)
         
         losses = sum(loss for loss in loss_dict.values())
 
@@ -99,7 +101,7 @@ def do_cls_da_train(
         
         scheduler.step()
         #del datas
-        #torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
 
         batch_time = time.time() - end
         end = time.time()
