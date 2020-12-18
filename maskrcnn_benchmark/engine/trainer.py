@@ -102,7 +102,7 @@ def do_cls_da_train(
         
         scheduler.step()
         #del datas
-        torch.cuda.empty_cache()
+        #torch.cuda.empty_cache()
 
         batch_time = time.time() - end
         end = time.time()
