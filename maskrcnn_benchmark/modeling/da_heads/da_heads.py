@@ -10,8 +10,10 @@ from maskrcnn_benchmark.layers import GradientScalarLayer
 from .loss import make_da_heads_loss_evaluator
 
 #eun0
+
+NUM_TARGET_DOMAINS = 2
 # when no cls
-NUM_TARGET_DOMAINS = 0
+USE_EMB = True
 class DAImgHead(nn.Module):
     """
     Adds a simple Image-level Domain Classifier head
@@ -26,8 +28,10 @@ class DAImgHead(nn.Module):
         super(DAImgHead, self).__init__()
         
         self.conv1_da = nn.Conv2d(in_channels, 512, kernel_size=1, stride=1)
-        
-        self.conv2_da = nn.Conv2d(512, NUM_TARGET_DOMAINS+1, kernel_size=1, stride=1)
+        if USE_EMB:
+            self.conv2_da = nn.Conv2d(512,1,kernel_size=1,stride=1)
+        else:
+            self.conv2_da = nn.Conv2d(512, NUM_TARGET_DOMAINS+1, kernel_size=1, stride=1)
 
         for l in [self.conv1_da, self.conv2_da]:
             torch.nn.init.normal_(l.weight, std=0.001)
@@ -55,7 +59,10 @@ class DAInsHead(nn.Module):
         super(DAInsHead, self).__init__()
         self.fc1_da = nn.Linear(in_channels, 1024)
         self.fc2_da = nn.Linear(1024, 1024)
-        self.fc3_da = nn.Linear(1024, NUM_TARGET_DOMAINS+1)
+        if USE_EMB:
+            self.fc3_da = nn.Linear(1024,256)
+        else:
+            self.fc3_da = nn.Linear(1024, NUM_TARGET_DOMAINS+1)
         for l in [self.fc1_da, self.fc2_da]:
             nn.init.normal_(l.weight, std=0.01)
             nn.init.constant_(l.bias, 0)
@@ -143,7 +150,7 @@ class DomainAdaptationModule(torch.nn.Module):
 
         da_img_features = self.imghead(img_grl_fea)
         da_anc_img_features = self.imghead(anc_img_grl_fea)
-        da_ins_features = self.inshead(ins_grl_fea) # [768,1]
+        da_ins_features = self.inshead(ins_grl_fea) # [768,256]
         da_anc_ins_features = self.inshead(anc_ins_grl_fea)       
         
         img_flat = da_img_features[0].view(da_img_features[0].size(0),-1)
@@ -160,10 +167,10 @@ class DomainAdaptationModule(torch.nn.Module):
         margin = 0.7
         img_tl = compute_triplet_loss(ancs,pos,neg,margin=margin)
 
-        da_ins = da_ins_features.view(3,256,-1) # [3,256,1]
+        da_ins = da_ins_features.view(3,256,-1) # [3,256,256]
         da_anc = da_anc_ins_features.view(3,256,-1)
 
-        da_ins = torch.mean(da_ins,dim=1) # [3,1]
+        da_ins = torch.mean(da_ins,dim=1) # [3,256]
         da_anc = torch.mean(da_anc,dim=1)
 
         #da_ins = torch.nn.functional.normalize(da_ins,p=2,dim=1)
@@ -178,8 +185,8 @@ class DomainAdaptationModule(torch.nn.Module):
         if self.training:
 
             losses = {}
-            losses["img_triplet_loss_no_cls"] = img_tl
-            losses["ins_triplet_loss_no_cls"] = ins_tl
+            losses["img_triplet_loss_no_cls"] = 0.1 * img_tl
+            losses["ins_triplet_loss_no_cls"] = 0.1 * ins_tl
 
             return losses
         return {}
