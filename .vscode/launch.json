@@ -4,6 +4,17 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
+        {
+            "name": "Debug",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "args": [
+                "--config-file",
+                "configs/da_faster_rcnn/e2e_da_faster_rcnn_R_50_C4_cityscapes_to_foggy_snowy_cityscapes.yaml",
+            ]
+        },
         {
             "name": "Test",
             "type": "python",
@@ -15,16 +26,7 @@
                 "MODEL.WEIGHT",
                 "cls/model_final.pth",
             ]
-        },
-        {
-            "name": "Debug",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "args": [
-                "--config-file",
-                "configs/da_faster_rcnn/e2e_da_faster_rcnn_R_50_C4_cityscapes_to_foggy_snowy_cityscapes.yaml",
-            ]
         }
+        
     ]
 }

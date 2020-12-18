@@ -95,7 +95,7 @@ class DomainAdaptationModule(torch.nn.Module):
         self.img_weight = cfg.MODEL.DA_HEADS.DA_IMG_LOSS_WEIGHT
         self.ins_weight = cfg.MODEL.DA_HEADS.DA_INS_LOSS_WEIGHT
         #self.cst_weight = cfg.MODEL.DA_HEADS.DA_CST_LOSS_WEIGHT
-        self.cst_weight = 0
+        #self.cst_weight = 0
 
         self.grl_img = GradientScalarLayer(-1.0*self.cfg.MODEL.DA_HEADS.DA_IMG_GRL_WEIGHT)
         self.grl_ins = GradientScalarLayer(-1.0*self.cfg.MODEL.DA_HEADS.DA_INS_GRL_WEIGHT)
@@ -123,9 +123,13 @@ class DomainAdaptationModule(torch.nn.Module):
                 testing, it is an empty dict.
         """
 
+        
         if self.resnet_backbone:
             da_ins_feature = self.avgpool(da_ins_feature)
             da_anc_ins_feature = self.avgpool(da_anc_ins_feature)
+        
+        #debug
+        #da_anc_ins_feature = da_ins_feature
 
         da_ins_feature = da_ins_feature.view(da_ins_feature.size(0),-1)
         da_anc_ins_feature = da_anc_ins_feature.view(da_anc_ins_feature.size(0),-1)
@@ -139,7 +143,7 @@ class DomainAdaptationModule(torch.nn.Module):
 
         da_img_features = self.imghead(img_grl_fea)
         da_anc_img_features = self.imghead(anc_img_grl_fea)
-        da_ins_features = self.inshead(ins_grl_fea) # [768,3]
+        da_ins_features = self.inshead(ins_grl_fea) # [768,1]
         da_anc_ins_features = self.inshead(anc_ins_grl_fea)       
         
         img_flat = da_img_features[0].view(da_img_features[0].size(0),-1)
@@ -156,32 +160,27 @@ class DomainAdaptationModule(torch.nn.Module):
         margin = 0.2
         img_tl = compute_triplet_loss(ancs,pos,neg,margin=margin)
 
-        ins_flat = da_ins_features.view(da_ins_features.size(0),-1)
-        ins_anc_flat = da_anc_ins_features.view(da_anc_ins_features.size(0),-1)
+        da_ins = da_ins_features.view(3,256,-1) # [3,256,1]
+        da_anc = da_anc_ins_features.view(3,256,-1)
 
-        ins_flat = torch.nn.functional.normalize(ins_flat,p=2,dim=1)
-        ins_anc_flat = torch.nn.functional.normalize(ins_anc_flat,p=2,dim=1)
+        da_ins = torch.mean(da_ins,dim=1) # [3,1]
+        da_anc = torch.mean(da_anc,dim=1)
 
-        ancs_ins = torch.stack([ins_anc_flat[0],ins_anc_flat[1],ins_anc_flat[2]])
-        pos_ins = torch.stack([ins_flat[0],ins_flat[1],ins_flat[2]])
-        neg_ins = torch.stack([ins_flat[1],ins_flat[2],ins_flat[0]])
+        da_ins = torch.nn.functional.normalize(da_ins,p=2,dim=1)
+        da_anc = torch.nn.functional.normalize(da_anc,p=2,dim=1)
+
+        ancs_ins = torch.stack([da_anc[0],da_anc[1],da_anc[2]])
+        pos_ins = torch.stack([da_ins[0],da_ins[1],da_ins[2]])
+        neg_ins = torch.stack([da_ins[1],da_ins[2],da_ins[0]])
 
         ins_tl = compute_triplet_loss(ancs_ins,pos_ins,neg_ins,margin=margin)
 
         if self.training:
-            #da_img_loss, da_ins_loss, da_consistency_loss = self.loss_evaluator(
-            #    da_img_features, da_ins_features, da_img_consist_features, da_ins_consist_features, da_ins_labels, targets
-            #)
 
             losses = {}
             losses["img_triplet_loss_no_cls"] = img_tl
             losses["ins_triplet_loss_no_cls"] = ins_tl
-            #if self.img_weight > 0:
-            #    losses["loss_da_image"] = self.img_weight * da_img_loss
-            #if self.ins_weight > 0:
-            #    losses["loss_da_instance"] = self.ins_weight * da_ins_loss
-            #if self.cst_weight > 0:
-            #    losses["loss_da_consistency"] = self.cst_weight * da_consistency_loss
+
             return losses
         return {}
 
