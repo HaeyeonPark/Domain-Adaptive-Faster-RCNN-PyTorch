@@ -157,7 +157,7 @@ class DomainAdaptationModule(torch.nn.Module):
         
         # debug
         #margin=3
-        margin = 0.3
+        margin = 0.2
         tl = compute_triplet_loss(ancs,pos,neg,margin=margin)
 
 
@@ -175,9 +175,9 @@ class DomainAdaptationModule(torch.nn.Module):
             )
             losses = {}
             if USE_EMB:
-                losses["img_emb_triplet_loss"] = 1 * tl
+                losses["img_emb_triplet_loss"] = 0.1 * tl
             else:
-                losses["img_triplet_loss"] = 1 * tl
+                losses["img_triplet_loss"] = 0.1 * tl
             if self.img_weight > 0:
                 losses["loss_da_image"] = self.img_weight * da_img_loss
             if self.ins_weight > 0:
