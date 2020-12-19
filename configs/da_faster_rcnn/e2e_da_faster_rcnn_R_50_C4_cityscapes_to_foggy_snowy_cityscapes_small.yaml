@@ -22,9 +22,9 @@ DATASETS:
   SNOWY_TRAIN: ("snowy_cityscapes_fine_instanceonly_seg_train_small_cocostyle",)
   TEST: ("foggy_cityscapes_fine_instanceonly_seg_val_cocostyle",)
 INPUT:
-  MIN_SIZE_TRAIN: (500,)
+  MIN_SIZE_TRAIN: (600,)
   MAX_SIZE_TRAIN: 1200
-  MIN_SIZE_TEST: 500
+  MIN_SIZE_TEST: 600
   MAX_SIZE_TEST: 1200
 SOLVER:
   BASE_LR: 0.001
