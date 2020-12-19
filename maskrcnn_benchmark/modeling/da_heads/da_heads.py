@@ -152,8 +152,10 @@ class DomainAdaptationModule(torch.nn.Module):
         da_ins_features = self.inshead(ins_grl_fea)
         da_img_consist_features = self.imghead(img_grl_consist_fea)
         da_ins_consist_features = self.inshead(ins_grl_consist_fea)
-        #da_img_consist_features = [fea.sigmoid() for fea in da_img_consist_features]
-        #da_ins_consist_features = da_ins_consist_features.sigmoid()
+        
+        da_img_consist_features = [torch.nn.functional.softmax(fea,dim=1)for fea in da_img_consist_features]
+        da_ins_consist_features = torch.nn.functional.softmax(da_ins_consist_features,dim=1)
+        
         if self.training:
             da_img_loss, da_ins_loss, da_consistency_loss = self.loss_evaluator(
                 da_img_features, da_ins_features, da_img_consist_features, da_ins_consist_features, da_ins_labels, targets
