@@ -109,22 +109,17 @@ class GeneralizedTripletRCNN(nn.Module):
             raise ValueError("In training mode anchors should be passed")
         images = to_image_list(images)
         features = self.backbone(images.tensors)
-        anchors_features=None
-        if anchors is not None:
-            anchors = to_image_list(anchors)
-            anchors_features = self.backbone(anchors.tensors)
-        
-        #debug
-        
 
+        #debug
         proposals, proposal_losses = self.rpn(images, features, targets)
         da_triplet_losses = {}
         if self.roi_heads:
             x, result, detector_losses, da_ins_feas, da_ins_labels = self.roi_heads(features, proposals, targets)
-            if self.da_heads and anchors is not None:
+            if self.da_heads and targets is not None:
                 assert targets
+                anchors = to_image_list(anchors)
+                anchors_features = self.backbone(anchors.tensors)
                 da_triplet_losses = self.da_heads(features,da_ins_feas, da_ins_labels, targets, anchors_features)
-                #da_triplet_losses = self.da_heads(features,da_ins_feas, da_ins_labels, targets, features)
 
         else:
             # RPN-only models don't have roi_heads
