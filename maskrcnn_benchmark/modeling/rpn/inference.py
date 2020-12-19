@@ -119,6 +119,8 @@ class RPNPostProcessor(torch.nn.Module):
                 max_proposals=self.post_nms_top_n,
                 score_field="objectness",
             )
+            if boxlist.bbox.size(0)<257:
+                print("num boxes",boxlist.bbox.size(0))
             result.append(boxlist)
         return result
 

@@ -10,13 +10,16 @@ def consistency_loss(img_feas, ins_fea, ins_labels, size_average=True):
     loss = []
     #len_ins = ins_fea.size(0)
     #intervals = [torch.nonzero(ins_labels).size(0), len_ins-torch.nonzero(ins_labels).size(0)]
-    num_domains = torch.max(ins_labels).item() + 1
+    
     #intervals=[]
     #for i in range(num_domains):
     #    mask = torch.zeros_like(ins_labels)
     #    mask[ins_labels==i]=i
     #    domain_masks.append(mask)
+    num_domains = torch.max(ins_labels).item() + 1
     repeat_num = len(ins_labels)//num_domains
+
+    intervals = []
 
     for img_fea_per_level in img_feas:
         N, A, H, W = img_fea_per_level.shape

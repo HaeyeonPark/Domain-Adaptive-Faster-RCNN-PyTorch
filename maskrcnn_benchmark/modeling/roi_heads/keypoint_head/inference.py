@@ -19,6 +19,8 @@ class KeypointPostProcessor(nn.Module):
         mask_prob = mask_prob.split(boxes_per_image, dim=0)
         scores = scores.split(boxes_per_image, dim=0)
 
+        
+
         results = []
         for prob, box, score in zip(mask_prob, boxes, scores):
             bbox = BoxList(box.bbox, box.size, mode="xyxy")

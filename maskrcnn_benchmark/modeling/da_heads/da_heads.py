@@ -30,12 +30,15 @@ class DAImgHead(nn.Module):
             torch.nn.init.normal_(l.weight, std=0.001)
             torch.nn.init.constant_(l.bias, 0)
 
-    def forward(self, x):
+    def forward(self, x,out_emb=False):
         img_features = []
         for feature in x:
             t = F.relu(self.conv1_da(feature))
             img_features.append(self.conv2_da(t))
-        return img_features
+        if out_emb:
+            return img_features,t
+        else:
+            return img_features
 
 
 
@@ -122,23 +125,8 @@ class DomainAdaptationModule(torch.nn.Module):
         da_ins_feature = da_ins_feature.view(da_ins_feature.size(0), -1)
 
         img_grl_fea = [self.grl_img(fea) for fea in img_features]
-        assert len(img_grl_fea)==1
+        assert len(img_grl_fea)==1 and (da_ins_labels==1).sum().item()==256
         anc_grl_fea = [self.grl_img(fea) for fea in anchors_features]
-
-        img_flat = img_grl_fea[0].view(img_grl_fea[0].size(0),-1)
-        anc_flat = anc_grl_fea[0].view(anc_grl_fea[0].size(0),-1)
-
-        img_norm = torch.nn.functional.normalize(img_flat,p=2,dim=1)
-        anc_norm = torch.nn.functional.normalize(anc_flat,p=2,dim=1)
-
-        ancs = torch.stack([anc_norm[0],anc_norm[1],anc_norm[2]])
-        pos = torch.stack([img_norm[0],img_norm[1],img_norm[2]])
-        neg = torch.stack([img_norm[1],img_norm[2],img_norm[0]])
-        
-        # debug
-        #margin=3
-        margin = 0.2
-        tl = compute_triplet_loss(ancs,pos,neg,margin=margin)
 
         ins_grl_fea = self.grl_ins(da_ins_feature)
         img_grl_consist_fea = [self.grl_img_consist(fea) for fea in img_features]
@@ -146,21 +134,49 @@ class DomainAdaptationModule(torch.nn.Module):
 
         #eun0
         # [num_domains, num_domains, h, w]
-        da_img_features = self.imghead(img_grl_fea)
+
+        USE_EMB = True
+        da_img_features, img_embs = self.imghead(img_grl_fea,out_emb=USE_EMB)
+        _, anc_embs = self.imghead(anc_grl_fea,out_emb=USE_EMB)
+
+        img_embs = img_embs.view(img_embs.size(0),-1)
+        anc_embs = anc_embs.view(anc_embs.size(0),-1)
+
+        img_embs = torch.nn.functional.normalize(img_embs,p=2,dim=1)
+        anc_embs = torch.nn.functional.normalize(anc_embs,p=2,dim=1)
+
+
+        #ancs = torch.stack([anc_embs[0],anc_embs[0],anc_embs[1],anc_embs[1],anc_embs[2],anc_embs[2]])
+        #pos = torch.stack([img_embs[0],img_embs[0],img_embs[1],img_embs[1],img_embs[2],img_embs[2]])
+        #neg = torch.stack([img_embs[1],img_embs[2],img_embs[0],img_embs[2],img_embs[0],img_embs[1]])
+
+        ancs = torch.stack([anc_embs[0],anc_embs[1],anc_embs[2]])
+        pos = torch.stack([img_embs[0],img_embs[1],img_embs[2]])
+        neg = torch.stack([img_embs[1],img_embs[2],img_embs[0]])
 
         # [num_domains*num_instance,num_domains]
         da_ins_features = self.inshead(ins_grl_fea)
         da_img_consist_features = self.imghead(img_grl_consist_fea)
         da_ins_consist_features = self.inshead(ins_grl_consist_fea)
-        #da_img_consist_features = [fea.sigmoid() for fea in da_img_consist_features]
-        #da_ins_consist_features = da_ins_consist_features.sigmoid()
+
+        da_img_consist_features = [torch.nn.functional.softmax(fea,dim=1) for fea in da_img_consist_features]
+        da_ins_consist_features = torch.nn.functional.softmax(da_ins_consist_features,dim=1)
+
+        
+        # debug
+        #margin=3
+        margin = 0.3
+        tl = compute_triplet_loss(ancs,pos,neg,margin=margin)
+
         if self.training:
             da_img_loss, da_ins_loss, da_consistency_loss = self.loss_evaluator(
                 da_img_features, da_ins_features, da_img_consist_features, da_ins_consist_features, da_ins_labels, targets
             )
-
             losses = {}
-            losses["img_triplet_loss"] = tl
+            if USE_EMB:
+                losses["img_emb_triplet_loss"] = 1 * tl
+            else:
+                losses["img_triplet_loss"] = 1 * tl
             if self.img_weight > 0:
                 losses["loss_da_image"] = self.img_weight * da_img_loss
             if self.ins_weight > 0:
